@@ -404,3 +404,4 @@ FodyWeavers.xsd
 # appsettings.*.json
 /API/appsettings.json
 /API/firebase-service-account.json
+/.dotnet-cli-home/.dotnet
