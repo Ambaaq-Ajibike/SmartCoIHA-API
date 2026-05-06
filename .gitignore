@@ -402,3 +402,5 @@ FodyWeavers.xsd
 # Application settings (uncomment if these contain secrets)
 # appsettings.Development.json
 # appsettings.*.json
+/API/appsettings.json
+/API/firebase-service-account.json
