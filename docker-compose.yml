@@ -4,9 +4,7 @@ services:
     restart: unless-stopped     
     build:
       context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"      
+      dockerfile: Dockerfile 
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       ASPNETCORE_URLS: ${ASPNETCORE_URLS}
