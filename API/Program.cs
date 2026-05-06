@@ -1,4 +1,4 @@
-using API.BackgroundServices;
+﻿using API.BackgroundServices;
 using API.Middlewares;
 using Application;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -15,7 +15,7 @@ using Serilog;
 using Serilog.Events;
 using System.Text;
 
-// 1. Initial Configure Serilog for structured logging
+// ------------------- SERILOG -------------------
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
     .Enrich.FromLogContext()
@@ -28,10 +28,9 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
-    // Replace the default standard .NET logging with Serilog
     builder.Host.UseSerilog();
 
-    // Configure CORS
+    // ------------------- CORS -------------------
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("AllowAll", policy =>
@@ -42,58 +41,68 @@ try
         });
     });
 
-    // 2. Configure OpenTelemetry for Tracing and Metrics
+    // ------------------- OPEN TELEMETRY -------------------
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(resource => resource.AddService("SmartCoIHA.API"))
         .WithTracing(tracing =>
         {
             tracing
-                .AddAspNetCoreInstrumentation()     // Traces incoming HTTP requests
-                .AddHttpClientInstrumentation()     // Traces outgoing HTTP requests
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
                 .AddEntityFrameworkCoreInstrumentation()
-                .AddRedisInstrumentation()          // Traces Redis cache operations
-                .AddConsoleExporter();              // Output traces to the console for local dev
+                .AddRedisInstrumentation()
+                .AddConsoleExporter();
         })
         .WithMetrics(metrics =>
         {
             metrics
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
-                .AddMeter("System.Runtime")        // Collects GC, memory, and CPU metrics
-                .AddConsoleExporter();              // Outputs metrics to console
+                .AddMeter("System.Runtime")
+                .AddConsoleExporter();
         });
 
-    // Add services to the container.
+    // ------------------- SERVICES -------------------
     builder.Services.AddPersistenceServices(builder.Configuration);
     builder.Services.AddApplicationServices(builder.Configuration);
     builder.Services.AddHostedService<RabbitMqConsumerService>();
     builder.Services.AddHostedService<FhirValidationConsumerService>();
 
-    // Configure JWT Authentication
+    // ------------------- JWT -------------------
     var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-    builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
+
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings["Issuer"],
-            ValidAudience = jwtSettings["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!))
-        };
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtSettings["Issuer"],
+                ValidAudience = jwtSettings["Audience"],
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!))
+            };
+        });
+
+    // ------------------- FORWARDED HEADERS (FIXED) -------------------
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders =
+            ForwardedHeaders.XForwardedFor |
+            ForwardedHeaders.XForwardedProto;
+
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
     });
 
     builder.Services.AddAuthorization();
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
+
     builder.Services.AddOpenApi(options =>
     {
         options.AddDocumentTransformer((document, context, cancellationToken) =>
@@ -124,26 +133,30 @@ try
 
     });
 
-
+    // ------------------- BUILD APP -------------------
     var app = builder.Build();
 
-    // Ensure Serilog middleware is added to log HTTP request timelines
+    // ------------------- MIDDLEWARE ORDER (CRITICAL) -------------------
+
+    // 🔥 MUST BE FIRST
+    app.UseForwardedHeaders();
+
     app.UseSerilogRequestLogging();
 
-    // Configure the HTTP request pipeline.
+    app.UseMiddleware<ExceptionHandlingMiddleware>();
+
     if (app.Environment.IsDevelopment())
     {
-        app.MapOpenApi(); // Hosts OpenAPI doc at /openapi/v1.json
+        app.MapOpenApi();
+
         app.UseSwaggerUI(options =>
         {
-            // Point Swagger UI to the new standard .NET OpenAPI endpoint
             options.SwaggerEndpoint("/openapi/v1.json", "SmartCoIHA API v1");
         });
     }
 
-
-    app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseHttpsRedirection();
+
     app.UseCors("AllowAll");
 
     app.UseAuthentication();
@@ -151,10 +164,6 @@ try
 
     app.MapControllers();
 
-    app.UseForwardedHeaders(new ForwardedHeadersOptions
-    {
-        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-    });
     using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
