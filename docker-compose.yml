@@ -1,0 +1,33 @@
+name: smartcoiha-backend
+services:
+  smartcoiha-db:
+    image: postgres:latest
+    container_name: smartcoiha-db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: pgadmin123
+      POSTGRES_DB: SMARTCoIHA_DB
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+  smartcoiha-cache: 
+    image: redis:latest
+    container_name: smartcoiha_redis
+    ports:
+      - "6379:6379"
+
+  smartcoiha-mq: 
+    image: rabbitmq:3-management
+    container_name: smartcoiha_rabbitmq
+    ports: 
+      - "5672:5672" #Rabbit mq port
+      - "15672:15672" #Management UI Port
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: GUEST  
+
+volumes:
+  postgres_data:
+
