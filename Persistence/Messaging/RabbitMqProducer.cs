@@ -1,20 +1,24 @@
 ﻿using Application.Messaging.Interfaces;
+using Application.Settings;
+using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
 
 namespace Persistence.Messaging
 {
-    public class RabbitMqProducer : IMessagePublisher
+    public class RabbitMqProducer(IOptions<RabbitMqSettings> options) : IMessagePublisher
     {
+        private readonly RabbitMqSettings _settings = options.Value;
+
         public async Task PublishAsync<T>(T message, string queueName)
         {
             var factory = new ConnectionFactory()
             {
-                HostName = "localhost",
-                Port = 5672,
-                UserName = "guest",
-                Password = "GUEST"
+                HostName = _settings.HostName,
+                Port = _settings.Port,
+                UserName = _settings.UserName,
+                Password = _settings.Password
             };
 
             using var connection = await factory.CreateConnectionAsync();

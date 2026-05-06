@@ -1,20 +1,24 @@
-﻿using RabbitMQ.Client;
+﻿using Application.Settings;
+using Microsoft.Extensions.Options;
+using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
 using System.Text.Json;
 
 namespace Persistence.Messaging;
 
-public class RabbitMqConsumer
+public class RabbitMqConsumer(IOptions<RabbitMqSettings> options)
 {
+    private readonly RabbitMqSettings _settings = options.Value;
+
     public async Task StartAsync<T>(string queueName, Func<T, Task> handler)
     {
         var factory = new ConnectionFactory()
         {
-            HostName = "localhost",
-            Port = 5672,
-            UserName = "guest",
-            Password = "GUEST"
+            HostName = _settings.HostName,
+            Port = _settings.Port,
+            UserName = _settings.UserName,
+            Password = _settings.Password
         };
 
         var connection = await factory.CreateConnectionAsync();

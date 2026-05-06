@@ -62,7 +62,7 @@ try
 
     // Add services to the container.
     builder.Services.AddPersistenceServices(builder.Configuration);
-    builder.Services.AddApplicationServices();
+    builder.Services.AddApplicationServices(builder.Configuration);
     builder.Services.AddHostedService<RabbitMqConsumerService>();
     builder.Services.AddHostedService<FhirValidationConsumerService>();
 

@@ -1,5 +1,22 @@
 name: smartcoiha-backend
 services:
+  smartcoiha-api:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      container_name: smartcoiha_api
+      ports:
+        - "5000:8080"
+      environment:
+        ASPNETCORE_ENVIRONMENT: Development
+        ASPNETCORE_URLS: http://+:8080
+        ConnectionStrings__DefaultConnection: Host=smartcoiha-db;Port=5432;Database=SMARTCoIHA_DB;Username=admin;Password=pgadmin123
+        ConnectionStrings__Redis: smartcoiha-cache:6379
+        AppSettings__FrontendUrl: http://localhost:3000
+      depends_on:
+        - smartcoiha-db
+        - smartcoiha-cache
+        - smartcoiha-mq
   smartcoiha-db:
     image: postgres:latest
     container_name: smartcoiha-db
