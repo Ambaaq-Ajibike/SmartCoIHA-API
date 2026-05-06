@@ -2,6 +2,7 @@ using API.BackgroundServices;
 using API.Middlewares;
 using Application;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -143,7 +144,6 @@ try
 
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseHttpsRedirection();
-
     app.UseCors("AllowAll");
 
     app.UseAuthentication();
@@ -151,7 +151,10 @@ try
 
     app.MapControllers();
 
-
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    });
     using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
