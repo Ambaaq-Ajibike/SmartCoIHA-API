@@ -53,6 +53,7 @@ namespace Persistence
             services.AddScoped<ICacheService, RedisCacheService>();
             services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
             services.AddScoped<IPushNotificationService, FcmPushNotificationService>();
+
         }
     }
 }

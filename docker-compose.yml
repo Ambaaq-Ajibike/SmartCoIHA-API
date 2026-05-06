@@ -1,31 +1,69 @@
 name: smartcoiha-backend
 services:
   smartcoiha-api:
-      build:
-        context: .
-        dockerfile: Dockerfile
-      container_name: smartcoiha_api
-      ports:
-        - "5000:8080"
-      environment:
-        ASPNETCORE_ENVIRONMENT: Development
-        ASPNETCORE_URLS: http://+:8080
-        ConnectionStrings__DefaultConnection: Host=smartcoiha-db;Port=5432;Database=SMARTCoIHA_DB;Username=admin;Password=pgadmin123
-        ConnectionStrings__Redis: smartcoiha-cache:6379
-        AppSettings__FrontendUrl: http://localhost:3000
-      depends_on:
-        - smartcoiha-db
-        - smartcoiha-cache
-        - smartcoiha-mq
+    restart: unless-stopped     
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"      
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      ASPNETCORE_URLS: ${ASPNETCORE_URLS}
+    
+      # Logging
+      Logging__LogLevel__Default: ${LOGGING__LOGLEVEL__DEFAULT}
+      Logging__LogLevel__Microsoft_AspNetCore: ${LOGGING__LOGLEVEL__MICROSOFT_ASPNETCORE}
+    
+      # General
+      AllowedHosts: ${ALLOWEDHOSTS}
+    
+      # Connection Strings
+      ConnectionStrings__DefaultConnection: ${CONNECTIONSTRINGS__DEFAULTCONNECTION}
+      ConnectionStrings__Redis: ${CONNECTIONSTRINGS__REDIS}
+    
+      # Brevo
+      Brevo__ApiKey: ${BREVO__APIKEY}
+      Brevo__SenderEmail: ${BREVO__SENDEREMAIL}
+      Brevo__SenderName: ${BREVO__SENDERNAME}
+    
+      # JWT
+      JwtSettings__SecretKey: ${JWTSETTINGS__SECRETKEY}
+      JwtSettings__Issuer: ${JWTSETTINGS__ISSUER}
+      JwtSettings__Audience: ${JWTSETTINGS__AUDIENCE}
+      JwtSettings__ExpiryHours: ${JWTSETTINGS__EXPIRYHOURS}
+    
+      # RabbitMQ
+      RabbitMq__HostName: ${RABBITMQ__HOSTNAME}
+      RabbitMq__Port: ${RABBITMQ__PORT}
+      RabbitMq__UserName: ${RABBITMQ__USERNAME}
+      RabbitMq__Password: ${RABBITMQ__PASSWORD}
+    
+      # Firebase
+      Firebase__ServiceAccountKeyPath: ${FIREBASE__SERVICEACCOUNTKEYPATH}
+    
+      # App Settings
+      AppSettings__FrontendUrl: ${APPSETTINGS__FRONTENDURL}
+    
+      # Serilog
+      Serilog__MinimumLevel__Default: ${SERILOG__MINIMUMLEVEL__DEFAULT}
+      Serilog__MinimumLevel__Override__Microsoft: ${SERILOG__MINIMUMLEVEL__OVERRIDE__MICROSOFT}
+      Serilog__MinimumLevel__Override__Microsoft_Hosting_Lifetime: ${SERILOG__MINIMUMLEVEL__OVERRIDE__MICROSOFT_HOSTING_LIFETIME}
+      Serilog__MinimumLevel__Override__Microsoft_EntityFrameworkCore: ${SERILOG__MINIMUMLEVEL__OVERRIDE__MICROSOFT_ENTITYFRAMEWORKCORE}
+      Serilog__WriteTo__0__Name: ${SERILOG__WRITETO__0__NAME}
+    depends_on:
+      - smartcoiha-db
+      - smartcoiha-cache
+      - smartcoiha-mq
   smartcoiha-db:
     image: postgres:latest
     container_name: smartcoiha-db
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: pgadmin123
+      POSTGRES_USER:  ${PROJECT_USER}
+      POSTGRES_PASSWORD: ${PROJECT_PASS}  
       POSTGRES_DB: SMARTCoIHA_DB
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
 
@@ -42,8 +80,8 @@ services:
       - "5672:5672" #Rabbit mq port
       - "15672:15672" #Management UI Port
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: GUEST  
+      RABBITMQ_DEFAULT_USER: ${PROJECT_USER}
+      RABBITMQ_DEFAULT_PASS: ${PROJECT_PASS}  
 
 volumes:
   postgres_data:

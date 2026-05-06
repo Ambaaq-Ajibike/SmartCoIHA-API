@@ -2,12 +2,14 @@ using API.BackgroundServices;
 using API.Middlewares;
 using Application;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Persistence;
+using Persistence.Data;
 using Serilog;
 using Serilog.Events;
 using System.Text;
@@ -148,6 +150,13 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
+
+
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.Database.Migrate();
+    }
 
     app.Run();
 }
