@@ -4,22 +4,7 @@ services:
     restart: unless-stopped     
     build:
       context: .
-      dockerfile: Dockerfile
-    networks:
-      - dokploy-network  
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.smartcoiha.rule=Host(`api.smartcoiha.ascilaro.ng`)" 
-      - "traefik.http.routers.smartcoiha.entrypoints=websecure"
-      - "traefik.http.routers.smartcoiha.tls.certResolver=letsencrypt"
-      - "traefik.http.services.smartcoiha.loadbalancer.server.port=8080"
-      
-      # IMPORTANT: Add redirect from HTTP to HTTPS
-      - "traefik.http.routers.smartcoiha-http.rule=Host(`api.smartcoiha.ascilaro.ng`)"
-      - "traefik.http.routers.smartcoiha-http.entrypoints=web"
-      - "traefik.http.routers.smartcoiha-http.middlewares=smartcoiha-redirect"
-      - "traefik.http.middlewares.smartcoiha-redirect.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.smartcoiha-redirect.redirectscheme.permanent=true"
+      dockerfile: Dockerfile 
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       ASPNETCORE_URLS: ${ASPNETCORE_URLS}
@@ -98,8 +83,4 @@ services:
 
 volumes:
   postgres_data:
-networks:
-  dokploy-network:
-    external: true
 
-    
