@@ -16,7 +16,7 @@ namespace Application.Services.Implementations
             Guid endpointId,
             string baseUrl,
             List<string> supportedResources,
-            Guid testingPatientId)
+            string testingPatientId)
         {
             _logger.LogInformation("Starting FHIR endpoint validation. EndpointId: {EndpointId}, BaseUrl: {BaseUrl}, PatientId: {TestingPatientId}",
                 endpointId, baseUrl, testingPatientId);
@@ -38,7 +38,7 @@ namespace Application.Services.Implementations
                     endpointId,
                     baseUrl,
                     resourceName,
-                    testingPatientId.ToString());
+                    testingPatientId);
 
                 if (!isValid)
                 {
