@@ -1,22 +1,43 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-  WORKDIR /src
+FROM debian:12-slim AS build
+WORKDIR /src
 
-  COPY backend.slnx ./
-  COPY API/API.csproj API/
-  COPY Application/Application.csproj Application/
-  COPY Domain/Domain.csproj Domain/
-  COPY Persistence/Persistence.csproj Persistence/
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates wget; \
+    wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb; \
+    dpkg -i packages-microsoft-prod.deb; \
+    rm packages-microsoft-prod.deb; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends dotnet-sdk-10.0; \
+    rm -rf /var/lib/apt/lists/*
 
-  RUN dotnet restore API/API.csproj
+COPY backend.slnx ./
+COPY API/API.csproj API/
+COPY Application/Application.csproj Application/
+COPY Domain/Domain.csproj Domain/
+COPY Persistence/Persistence.csproj Persistence/
 
-  COPY . .
-  RUN dotnet publish API/API.csproj -c Release -o /app/publish
+RUN dotnet restore API/API.csproj
 
-  FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
-  WORKDIR /app
+COPY . .
+RUN dotnet publish API/API.csproj -c Release -o /app/publish
 
-  COPY --from=build /app/publish .
+FROM debian:12-slim AS runtime
+WORKDIR /app
 
-  EXPOSE 8080
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates wget; \
+    wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb; \
+    dpkg -i packages-microsoft-prod.deb; \
+    rm packages-microsoft-prod.deb; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends aspnetcore-runtime-10.0; \
+    apt-get purge -y --auto-remove wget; \
+    rm -rf /var/lib/apt/lists/*
 
-  ENTRYPOINT ["dotnet", "API.dll"]
+COPY --from=build /app/publish .
+
+EXPOSE 8080
+
+ENTRYPOINT ["dotnet", "API.dll"]

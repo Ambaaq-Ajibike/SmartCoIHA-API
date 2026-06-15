@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile 
+      pull: false
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       ASPNETCORE_URLS: ${ASPNETCORE_URLS}
