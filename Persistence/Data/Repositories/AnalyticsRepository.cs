@@ -2,6 +2,7 @@ using Application.Dtos;
 using Application.Repositories.Interfaces;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace Persistence.Data.Repositories
 {
@@ -87,12 +88,50 @@ namespace Persistence.Data.Repositories
             var incomingRequests = await dbContext.DataRequests.CountAsync(d => d.PatientInstitutionId == institutionId);
             var outgoingRequests = await dbContext.DataRequests.CountAsync(d => d.RequestingInstitutionId == institutionId);
 
-            var months = new List<string> { "Jan", "Feb", "Mar", "Apr", "May", "Jun" };
+            var currentMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            var startPeriod = currentMonth.AddMonths(-5);
+            var endPeriod = currentMonth.AddMonths(1);
+
+            var months = Enumerable.Range(0, 6)
+                .Select(i => startPeriod.AddMonths(i))
+                .ToList();
+
+            var monthlyRequestGroups = await dbContext.DataRequests
+                .Where(d =>
+                    (d.PatientInstitutionId == institutionId || d.RequestingInstitutionId == institutionId)
+                    && d.RequestedTimestamp >= startPeriod
+                    && d.RequestedTimestamp < endPeriod)
+                .GroupBy(d => new { d.RequestedTimestamp.Year, d.RequestedTimestamp.Month })
+                .Select(g => new
+                {
+                    g.Key.Year,
+                    g.Key.Month,
+                    Incoming = g.Count(d => d.PatientInstitutionId == institutionId),
+                    Outgoing = g.Count(d => d.RequestingInstitutionId == institutionId)
+                })
+                .ToListAsync();
+
+            var monthlyRequestsByMonth = monthlyRequestGroups.ToDictionary(
+                g => (g.Year, g.Month),
+                g => g);
+
+            var monthLabels = months
+                .Select(m => m.ToString("MMM yyyy", CultureInfo.InvariantCulture))
+                .ToList();
+
+            var incomingMonthlyData = months
+                .Select(m => monthlyRequestsByMonth.TryGetValue((m.Year, m.Month), out var group) ? group.Incoming : 0)
+                .ToList();
+
+            var outgoingMonthlyData = months
+                .Select(m => monthlyRequestsByMonth.TryGetValue((m.Year, m.Month), out var group) ? group.Outgoing : 0)
+                .ToList();
+
             var monthlyDataRequests = new GraphDataDto(
-                months,
+                monthLabels,
                 [
-                    new GraphDatasetDto("Incoming Requests", [5, 10, 15, 10, 20, 25]),
-                    new GraphDatasetDto("Outgoing Requests", [2, 4, 3, 5, 4, 6])
+                    new GraphDatasetDto("Incoming Requests", incomingMonthlyData),
+                    new GraphDatasetDto("Outgoing Requests", outgoingMonthlyData)
                 ]
             );
 

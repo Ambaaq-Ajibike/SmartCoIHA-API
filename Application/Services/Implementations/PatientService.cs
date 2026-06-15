@@ -117,11 +117,13 @@ namespace Application.Services.Implementations
                 return new BaseResponse<PatientDto>(false, $"Patient with ID {patientId} not found.", null!);
             }
 
+            var institutionName = await ResolveInstitutionNameAsync(patient);
+
             var patientDto = new PatientDto(
                 patient.InstitutePatientId,
                 patient.Name,
                 patient.Email,
-                patient.Institution?.Name ?? "Unknown",
+                institutionName,
                 patient.EnrollmentStatus.ToString());
 
             _logger.LogInformation("Successfully retrieved Patient: {PatientName} ({PatientId})", patient.Name, patientId);
@@ -160,21 +162,69 @@ namespace Application.Services.Implementations
                 return new BaseResponse<IEnumerable<PatientDto>>(
                     true,
                     "No patients found matching the criteria.",
-                    null!);
+                    []);
             }
+
+            var institutionNamesById = await ResolveInstitutionNamesAsync(patients);
 
             var patientDtos = patients.Select(patient => new PatientDto(
                 patient.InstitutePatientId,
                 patient.Name,
                 patient.Email,
-                patient.Institution?.Name ?? "Unknown",
-                patient.EnrollmentStatus.ToString()));
+                ResolveInstitutionName(patient, institutionNamesById),
+                patient.EnrollmentStatus.ToString()))
+                .ToList();
 
             _logger.LogInformation("Successfully retrieved {PatientCount} patient(s).", patients.Count);
             return new BaseResponse<IEnumerable<PatientDto>>(
                 true,
                 $"{patients.Count} patient(s) retrieved successfully.",
                 patientDtos);
+        }
+
+        private async Task<string> ResolveInstitutionNameAsync(Patients patient)
+        {
+            if (!string.IsNullOrWhiteSpace(patient.Institution?.Name))
+            {
+                return patient.Institution.Name;
+            }
+
+            var institution = await _institutionRepository.GetByIdAsync(patient.InstitutionID);
+            return string.IsNullOrWhiteSpace(institution?.Name) ? "Unknown" : institution.Name;
+        }
+
+        private async Task<Dictionary<Guid, string>> ResolveInstitutionNamesAsync(IEnumerable<Patients> patients)
+        {
+            var institutionNamesById = new Dictionary<Guid, string>();
+
+            foreach (var institutionId in patients.Select(p => p.InstitutionID).Distinct())
+            {
+                var institution = await _institutionRepository.GetByIdAsync(institutionId);
+                if (!string.IsNullOrWhiteSpace(institution?.Name))
+                {
+                    institutionNamesById[institutionId] = institution.Name;
+                }
+            }
+
+            return institutionNamesById;
+        }
+
+        private static string ResolveInstitutionName(
+            Patients patient,
+            IReadOnlyDictionary<Guid, string> institutionNamesById)
+        {
+            if (!string.IsNullOrWhiteSpace(patient.Institution?.Name))
+            {
+                return patient.Institution.Name;
+            }
+
+            if (institutionNamesById.TryGetValue(patient.InstitutionID, out var institutionName)
+                && !string.IsNullOrWhiteSpace(institutionName))
+            {
+                return institutionName;
+            }
+
+            return "Unknown";
         }
 
         public async Task<BaseResponse<bool>> AddFingerprintAsync(string patientId, string fingerprintTemplate)
