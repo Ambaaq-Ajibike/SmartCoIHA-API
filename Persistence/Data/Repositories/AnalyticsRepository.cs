@@ -27,7 +27,7 @@ namespace Persistence.Data.Repositories
 
             // Using standard labels. For real-world usage, align with specific time periods and dbContext properties like CreateDate
             var sixMonthsAgo = DateTime.UtcNow.AddMonths(-5);
-            var startPeriod = new DateTime(sixMonthsAgo.Year, sixMonthsAgo.Month, 1);
+            var startPeriod = new DateTime(sixMonthsAgo.Year, sixMonthsAgo.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
             var months = Enumerable.Range(0, 6)
                 .Select(i => startPeriod.AddMonths(i))
@@ -88,7 +88,7 @@ namespace Persistence.Data.Repositories
             var incomingRequests = await dbContext.DataRequests.CountAsync(d => d.PatientInstitutionId == institutionId);
             var outgoingRequests = await dbContext.DataRequests.CountAsync(d => d.RequestingInstitutionId == institutionId);
 
-            var currentMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            var currentMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
             var startPeriod = currentMonth.AddMonths(-5);
             var endPeriod = currentMonth.AddMonths(1);
 
